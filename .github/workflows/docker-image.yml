@@ -2,12 +2,12 @@ name: Docker Image CI
 
 on:
   schedule:
-      - cron: '0 0 * * *' 
+    - cron: '0 0 * * *'  # Runs daily at midnight
   push:
     branches: [ "main" ]
     paths-ignore:
       - '**.md'
-    
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -61,7 +61,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
-          
+
       - name: Build and push
         id: build-and-push
         uses: docker/build-push-action@v6
@@ -79,8 +79,8 @@ jobs:
       - name: Sign the published Docker image
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          COSIGN_KEY: ${{secrets.COSIGN_KEY}}
-          COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
+          COSIGN_KEY: ${{ secrets.COSIGN_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           TAGS: ${{ steps.meta.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
         run: echo "${TAGS}" | xargs -I {} cosign sign --key env://COSIGN_KEY --yes {}@${DIGEST}
