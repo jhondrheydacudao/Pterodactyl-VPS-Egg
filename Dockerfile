@@ -1,10 +1,10 @@
-# Use Ubuntu noble (24.04) as the base image
+# Use Ubuntu Noble (24.04) as the base image
 FROM ubuntu:noble
 
-# Set the environment variable to disable interactive prompts during package installation
+# Disable interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Set the PRoot version
+# Define PRoot version
 ENV PROOT_VERSION=5.4.0
 
 # Install necessary packages
@@ -21,36 +21,29 @@ RUN apt-get update && \
         adduser && \
     rm -rf /var/lib/apt/lists/*
 
-# Configure locale
-RUN update-locale lang=en_US.UTF-8 && \
-    dpkg-reconfigure --frontend noninteractive locales
+# Configure system locale
+RUN locale-gen en_US.UTF-8 && \
+    update-locale LANG=en_US.UTF-8
 
-# Install PRoot
-RUN ARCH=$(uname -m) && \
+# Download and install PRoot
+RUN ARCH=$(dpkg --print-architecture) && \
     mkdir -p /usr/local/bin && \
-    proot_url="https://github.com/ysdragon/proot-static/releases/download/v${PROOT_VERSION}/proot-${ARCH}-static" && \
-    curl -Ls "$proot_url" -o /usr/local/bin/proot && \
-    chmod 755 /usr/local/bin/proot
+    curl -Lso /usr/local/bin/proot \
+      "https://github.com/ysdragon/proot-static/releases/download/v${PROOT_VERSION}/proot-${ARCH}-static" && \
+    chmod +x /usr/local/bin/proot
 
 # Create a non-root user
 RUN useradd -m -d /home/container -s /bin/bash container
 
-# Switch to the new user
+# Set user context
 USER container
 ENV USER=container
 ENV HOME=/home/container
-
-# Set the working directory
 WORKDIR /home/container
 
-# Copy scripts into the container
-COPY --chown=container:container ./entrypoint.sh /entrypoint.sh
-COPY --chown=container:container ./install.sh /install.sh
-COPY --chown=container:container ./helper.sh /helper.sh
-COPY --chown=container:container ./run.sh /run.sh
+# Copy scripts into the container and ensure ownership & permissions
+COPY --chown=container:container ./entrypoint.sh ./install.sh ./helper.sh ./run.sh ./
+RUN chmod +x entrypoint.sh install.sh helper.sh run.sh
 
-# Make the copied scripts executable
-RUN chmod +x /entrypoint.sh /install.sh /helper.sh /run.sh
-
-# Set the default command
-CMD ["/bin/bash", "/entrypoint.sh"]
+# Default command
+CMD ["/bin/bash", "/home/container/entrypoint.sh"]
